@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ROOT SYSTEM - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #000; color: #00ff00; font-family: monospace; }
+        .container { max-width: 1200px; margin-top: 30px; }
+        .card { background: #0a0a0a; border: 1px solid #00ff00; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 15px #00ff00; }
+        .btn-primary { background: #00ff00; color: #000; border: none; font-weight: bold; }
+        .btn-primary:hover { background: #00cc00; }
+        .btn-success { background: #00ff00; color: #000; border: none; font-weight: bold; }
+        .btn-danger { background: #ff0000; border: none; font-weight: bold; color: #fff; }
+        input, textarea, select { background: #111 !important; color: #00ff00 !important; border: 1px solid #00ff00 !important; font-family: monospace; }
+        h1, h3 { color: #00ff00; font-weight: bold; }
+        .stats-box { text-align: center; padding: 20px; background: #0a0a0a; border-radius: 10px; border: 1px solid #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .stats-box h4 { color: #00ff00; font-size: 28px; }
+        table { color: #00ff00; }
+        .badge-active { background: #00ff00; color: #000; }
+        .badge-inactive { background: #ff0000; color: #fff; }
+        .badge-running { background: #ff9900; color: #000; }
+        .badge-completed { background: #00ff00; color: #000; }
+        .text-muted { color: #00aa00 !important; }
+        .alert-success { background: #003300; color: #00ff00; border: 1px solid #00ff00; }
+        .alert-danger { background: #330000; color: #ff0000; border: 1px solid #ff0000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>⚡ ROOT SYSTEM EMAIL BOMBER v3.0</h1>
+            <div>
+                <span class="text-muted">Logged in: <strong>{{ session.admin }}</strong></span>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger ms-3">LOGOUT</a>
+            </div>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-box">
+                    <h6>Total SMTPs</h6>
+                    <h4>{{ smtps|length }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-box">
+                    <h6>Active SMTPs</h6>
+                    <h4>{{ smtps|selectattr('status', 'equalto', 'active')|list|length }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-box">
+                    <h6>Total Attacks</h6>
+                    <h4>{{ attacks|length }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-box">
+                    <h6>Total Sent</h6>
+                    <h4>{{ attacks|sum(attribute='sent') }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-5">
+                <div class="card">
+                    <h3>🎯 START ATTACK</h3>
+                    <form method="POST" action="{{ url_for('start_attack') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Target Email</label>
+                            <input type="email" name="target" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <select name="amount" class="form-control">
+                                <option value="100">100</option>
+                                <option value="250">250</option>
+                                <option value="500">500</option>
+                                <option value="1000">1000</option>
+                                <option value="5000">5000</option>
+                                <option value="10000">10000</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">⚡ LAUNCH ATTACK</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3>📧 ADD SMTPS</h3>
+                    <form method="POST" action="{{ url_for('add_smtp') }}">
+                        <div class="mb-3">
+                            <label class="form-label">SMTP List (host|port|user|pass)</label>
+                            <textarea name="smtp_list" class="form-control" rows="8" placeholder="mail.example.com|587|user@example.com|password"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">ADD SMTPS</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="card">
+                    <h3>📊 RECENT ATTACKS</h3>
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Target</th>
+                                <th>Amount</th>
+                                <th>Sent</th>
+                                <th>Failed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attack in attacks %}
+                            <tr>
+                                <td>{{ attack.target }}</td>
+                                <td>{{ attack.amount }}</td>
+                                <td>{{ attack.sent }}</td>
+                                <td>{{ attack.failed }}</td>
+                                <td>
+                                    {% if attack.status == 'completed' %}
+                                        <span class="badge badge-completed">COMPLETED</span>
+                                    {% elif attack.status == 'running' %}
+                                        <span class="badge badge-running">RUNNING</span>
+                                    {% elif attack.status == 'failed' %}
+                                        <span class="badge badge-inactive">FAILED</span>
+                                    {% else %}
+                                        <span class="badge badge-active">PENDING</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <h3>📧 SMTP LIST</h3>
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Host</th>
+                                <th>Port</th>
+                                <th>Username</th>
+                                <th>Used</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for smtp in smtps %}
+                            <tr>
+                                <td>{{ smtp.host }}</td>
+                                <td>{{ smtp.port }}</td>
+                                <td>{{ smtp.username }}</td>
+                                <td>{{ smtp.used_count }}</td>
+                                <td>
+                                    {% if smtp.status == 'active' %}
+                                        <span class="badge badge-active">ACTIVE</span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">INACTIVE</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('delete_smtp', smtp_id=smtp.id) }}" class="btn btn-sm btn-danger">DELETE</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
